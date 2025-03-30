@@ -4,8 +4,7 @@
 #include "../src/led_bar.h"
 
 // Globals for LED bar control
-int base_transition_period = 16;  // Initial transition period
-int BTP_multiplier = 4;           // Multiplier for delay timing
+int transition_period = 16;       // Transition period -> 1s
 char curr_num = '0';              // Current pattern number
 char prev_num = '0';              // Previous pattern number for reset logic
 bool locked = true;               // System lock state
@@ -50,21 +49,12 @@ int main(void)
                 {
                     locked = false;         // Unlock the system
                 }
-                else if (received >= '0' && received <= '4')
+                else if (received >= '0' && received <= '7')
                 {
                     prev_num = curr_num;    // Store previous pattern
                     curr_num = received;    // Set new pattern
                     num_update = true;      // Flag new pattern received
                     reset_pattern = (prev_num == curr_num);  // Reset if same pattern
-                }
-                else if (received == 'A' && !locked)
-                {
-                    base_transition_period -= 4;  // Decrease delay
-                    if (base_transition_period < 4) base_transition_period = 4;
-                }
-                else if (received == 'B' && !locked)
-                {
-                    base_transition_period += 4;  // Increase delay
                 }
             }
 
