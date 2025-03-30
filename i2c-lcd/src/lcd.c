@@ -9,7 +9,7 @@
 
 // used to control 3 options on the lcd:
 //  display on/off, cursor, blink
-static uint8_t display_ctrl;
+static uint8_t display_ctrl = 0x0C;
 
 
 /* --- init --- */
@@ -50,7 +50,6 @@ void lcd_init(void)
 	lcd_cmd_inst(0x28);
 
 	// display control; display on, cursor off, blink off
-	display_ctrl = 0x0C;
 	lcd_cmd_inst(display_ctrl);
 	
 	lcd_clear_display();
@@ -63,7 +62,7 @@ void lcd_init(void)
 /* --- general use --- */
 
 
-void lcd_print_line(const char *line_chars, uint8_t line_num)
+__attribute__((noinline)) void lcd_print_line(const char *line_chars, uint8_t line_num)
 {
 	// set the cursor to the beginning of the selected line
 	if (line_num)
@@ -93,7 +92,7 @@ void lcd_print_line(const char *line_chars, uint8_t line_num)
 	}
 }
 
-void lcd_clear_display(void)
+__attribute__((noinline)) void lcd_clear_display(void)
 {
 	lcd_set_mode(0, 0);
 
@@ -101,18 +100,6 @@ void lcd_clear_display(void)
 
 	// 3ms = 3000us
 	__delay_cycles(3000);
-}
-
-void lcd_toggle_cursor(void)
-{
-	display_ctrl ^= BIT1;
-	lcd_cmd_inst(display_ctrl);
-}
-
-void lcd_toggle_blink(void)
-{
-	display_ctrl ^= BIT0;
-	lcd_cmd_inst(display_ctrl);
 }
 
 
