@@ -5,7 +5,7 @@
 #define MAX_WINDOW 20
 
 static int16_t queue[MAX_WINDOW];
-static uint8_t window_size = 20;
+static uint8_t window_size = 3;
 static uint8_t num_samples = 0;
 static uint8_t index = 0;
 static int32_t sum = 0;
