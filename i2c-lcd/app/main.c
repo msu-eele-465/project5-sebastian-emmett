@@ -10,7 +10,9 @@
 
 #define SLAVE_ADDRESS SLAVE1_ADDR
 
-char curr_key[2];
+char curr_key = 0;
+int8_t temperature_data[2];
+char receive_data_buffer[3];
 
 
 /* --- program --- */
@@ -26,9 +28,9 @@ int main(void)
 	const char *pattern_2 = "up counter      ";
 	const char *pattern_3 = "in and out      ";
 	const char *pattern_4 = "down counter    ";
-	const char *pattern_5 = "rotate 1 left   ";
-	const char *pattern_6 = "rotate 7 right  ";
-	const char *pattern_7 = "fill left       ";
+	// const char *pattern_5 = "rotate 1 left   ";
+	// const char *pattern_6 = "rotate 7 right  ";
+	// const char *pattern_7 = "fill left       ";
 
 	const char *set_window = "set window size ";
 	const char *set_pattern = "set pattern     ";
@@ -37,6 +39,7 @@ int main(void)
 	uint8_t pattern = 255;
 
 	uint8_t locked = 1;
+	uint8_t recv_amt = 0;
 
     // Disable low-power mode / GPIO high-impedance
 	PM5CTL0 &= ~LOCKLPM5;
@@ -55,11 +58,13 @@ int main(void)
 
 		while (1)
 		{
-			// Poll to see if we have a new key - store in curr_key if so
-			uint8_t recv_amt = i2c_get_received_data(curr_key);
+			// Poll to see if we have new data
+			recv_amt = i2c_get_received_data(receive_data_buffer);
 			if (recv_amt == 1)
         	{
-				switch (*curr_key)
+				// If we have a new key in the data buffer, save it to curr_key
+				curr_key = receive_data_buffer[0];
+				switch (curr_key)
 				{
 					case 'D':
 						locked = 1;
@@ -77,7 +82,7 @@ int main(void)
 
 						break;
 
-					case '9':
+					case '9': // #FIXME should probably remove this
 						lcd_toggle_blink();
 
 						break;
@@ -102,11 +107,12 @@ int main(void)
 						lcd_clear_display();
 						lcd_print_line(set_window, 0);
 
-						i2c_get_received_data(curr_key);
-						temperature_buffer[14] = curr_key;
+						// #FIXME
+						// i2c_get_received_data(curr_key);
+						// temperature_buffer[14] = curr_key;
 
-						i2c_get_received_data(curr_key);
-						temperature_buffer[15] = curr_key;
+						// i2c_get_received_data(curr_key);
+						// temperature_buffer[15] = curr_key;
 
 						// the lcd is cleared here to prevent set_window from
 						// 	remaining on the display
@@ -119,8 +125,9 @@ int main(void)
 						lcd_clear_display();
 						lcd_print_line(set_pattern, 0);
 
-						i2c_get_received_data(curr_key);
-						pattern = *curr_key;
+						// #FIXME
+						// i2c_get_received_data(curr_key);
+						// pattern = *curr_key;
 
 						// the lcd is cleared here to prevent set_pattern from
 						// 	remaining on the display
@@ -155,17 +162,17 @@ int main(void)
 						lcd_print_line(pattern_4, 0);
 						break;
 
-					case 5:
-						lcd_print_line(pattern_5, 0);
-						break;
+					// case 5:
+					// 	lcd_print_line(pattern_5, 0);
+					// 	break;
 
-					case 6:
-						lcd_print_line(pattern_6, 0);
-						break;
+					// case 6:
+					// 	lcd_print_line(pattern_6, 0);
+					// 	break;
 
-					case 7:
-						lcd_print_line(pattern_7, 0);
-						break;
+					// case 7:
+					// 	lcd_print_line(pattern_7, 0);
+					// 	break;
 
 					default:
 						break;
@@ -174,22 +181,22 @@ int main(void)
 			// TODO: This is almost certainly wrong right now
 			else if (recv_amt == 2)
 			{
-				// use slow division so the remainder is left over and
-				// 	can be moved into the next slot
-				// this also provides a distinct bound on runtime
-				temperature_buffer[2] = '0';
-				while (curr_key[0] > 9)
+				// Pull temperature data from the data buffer into our temperature buffer
+				temperature_data[0] = receive_data_buffer[1];
+				temperature_data[1] = receive_data_buffer[2];
+
+				while (curr_key > 9)
 				{
 					temperature_buffer[2]++;
-					curr_key[0] -= 10;
+					curr_key -= 10;
 				}
-				temperature_buffer[3] = '0' + curr_key[0];
+				temperature_buffer[3] = '0' + curr_key;
 				
 				temperature_buffer[4] = '0';
-				while (curr_key[1] > 9)
+				while (curr_key > 9)
 				{
 					temperature_buffer[4]++;
-					curr_key[1] -= 10;
+					curr_key -= 10;
 				}
 			}
 			else

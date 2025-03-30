@@ -6,16 +6,19 @@
 
 // Helpful Brock video :D https://www.youtube.com/watch?v=BvITEarUMkc
 
-volatile char i2c_received_data;
-volatile bool i2c_data_ready = false;
+// Volatile variables for I2C slave receive handling
+volatile char rx_buffer[2];          // Buffer to store up to 2 received bytes
+volatile uint8_t rx_count = 0;       // Number of bytes received in current transaction
+volatile bool transaction_complete = false; // Flag for completed transaction
+volatile uint8_t rx_bytes = 0;       // Number of bytes in last completed transaction
 
+// Variables for master transmit (unchanged)
 volatile char tx_data;              // Data to send
-volatile int8_t tx_temp_whole = 0;      // Temperature whole value to send
-volatile int8_t tx_temp_tenths = 0;     // Temperature tenths to send
-
-volatile bool i2c_tx_temp_complete = true; // Transmission complete flag for temp transmission (true when idle)
-volatile bool i2c_tx_temp_partial = false; // Transmission partially complete flag for temp transmission
-volatile bool i2c_tx_complete = true; // Transmission complete flag (true when idle)
+volatile int8_t tx_temp_whole = 0;  // Temperature whole value to send
+volatile int8_t tx_temp_tenths = 0; // Temperature tenths to send
+volatile bool i2c_tx_temp_complete = true; // Transmission complete flag for temp
+volatile bool i2c_tx_temp_partial = false; // Transmission partially complete flag
+volatile bool i2c_tx_complete = true; // Transmission complete flag
 
 void i2c_master_init(void)
 {
@@ -72,15 +75,27 @@ void i2c_send(uint8_t slave_address, char data)
     UCB0CTLW0 |= UCTXSTT;      // Generate START
 }
 
-bool i2c_get_received_data(char* data)
+uint8_t i2c_get_received_data(char* data)
 {
-    if (i2c_data_ready)
+    if (transaction_complete)
     {
-        *data = i2c_received_data;
-        i2c_data_ready = false;
-        return true;
+        if (rx_bytes == 1)
+        {
+            data[0] = rx_buffer[0];
+        }
+        else if (rx_bytes == 2)
+        {
+            data[1] = rx_buffer[0];
+            data[2] = rx_buffer[1];
+            rx_bytes = 0;
+        }
+        transaction_complete = false;
+        return rx_bytes;
     }
-    return false;
+    else
+    {
+        return 0;
+    }
 }
 
 void i2c_send_temp(int16_t temp)
@@ -90,7 +105,7 @@ void i2c_send_temp(int16_t temp)
     i2c_tx_temp_complete = false; // Toggle tx complete flag false
     tx_temp_whole = temp / 10;    // Calculate the whole number from our given temperature
     tx_temp_tenths = temp % 10;   // Calculate the tenths number from our given temperature
-    UCB0I2CSA = SLAVE2_ADDR;      // Set slave address
+    UCB0I2CSA = SLAVE1_ADDR;      // Set slave address
     UCB0CTLW0 |= UCTXSTT;         // Generate START
 }
 
@@ -105,12 +120,32 @@ void i2c_send_to_both(char data)
 #pragma vector=EUSCI_B0_VECTOR
 __interrupt void EUSCI_B0_I2C_ISR(void)
 {
-    if (UCB0IFG & UCRXIFG)  // Slave receive interrupt
+    if (UCB0IFG & UCSTTIFG)  // Start condition detected
     {
-        i2c_received_data = UCB0RXBUF;  // Read received data
-        i2c_data_ready = true;          // Set flag to indicate new data
+        rx_count = 0;
+        UCB0IFG &= ~UCSTTIFG;  // Clear start condition flag
     }
-    else if (UCB0IFG & UCTXIFG0)  // Master transmit interrupt
+    if (UCB0IFG & UCRXIFG)   // Byte received
+    {
+        if (rx_count < 2)
+        {
+            rx_buffer[rx_count] = UCB0RXBUF;  // Clears UCRXIFG
+            rx_count++;
+        }
+        else
+        {
+            UCB0RXBUF; // Discard extra bytes
+        }
+    }
+    if (UCB0IFG & UCSTPIFG)  // Stop condition detected
+    {
+        transaction_complete = true;
+        rx_bytes = rx_count;
+        UCB0IFG &= ~UCSTPIFG;  // Clear stop condition flag
+    }
+
+    // Master transmit handling
+    if (UCB0IFG & UCTXIFG0)  // Master transmit interrupt
     {
         if (i2c_tx_complete == false)
         {
