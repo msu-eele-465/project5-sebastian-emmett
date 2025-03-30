@@ -7,54 +7,14 @@
 
 /* --- global variables --- */
 
+
 #define SLAVE_ADDRESS SLAVE1_ADDR
 
-char curr_key = 'a';
+char curr_key[2];
+
 
 /* --- program --- */
 
-
-// this contains the logic to update the transition_period
-// 	string according to the base_transition_period
-void _update_transition_period(char *transition_period, uint8_t base_transition_period)
-{
-
-	// soft cap of base_transition_period at 9.75, since it
-	// 	seems unreasonable to display anything more than that
-	if (base_transition_period > 39)
-	{
-		base_transition_period = 39;
-	}
-
-	// first turn the integer part into a string
-	transition_period[7] = '0' + (base_transition_period >> 2);
-
-	// because the base_transition_period moves in increments of
-	//  0.25 it is possible to switch on the lower 4 bits of it
-	//  and insert the correct string with no further calculation
-	switch (base_transition_period & 0x03)
-	{
-		case 0x00:
-			transition_period[9] = '0';
-			transition_period[10] = '0';
-			break;
-
-		case 0x01:
-			transition_period[9] = '2';
-			transition_period[10] = '5';
-			break;
-
-		case 0x02:
-			transition_period[9] = '5';
-			transition_period[10] = '0';
-			break;
-
-		case 0x03:
-			transition_period[9] = '7';
-			transition_period[10] = '5';
-			break;
-	}
-}
 
 int main(void)
 {
@@ -67,16 +27,14 @@ int main(void)
 	const char *pattern_3 = "in and out      ";
 	const char *pattern_4 = "down counter    ";
 	const char *pattern_5 = "rotate 1 left   ";
-	const char *pattern_6 = "rotate 7 left   ";
+	const char *pattern_6 = "rotate 7 right  ";
 	const char *pattern_7 = "fill left       ";
 
-	char transition_period[] = "period=0.00     ";
+	const char *set_window = "set window size ";
+	const char *set_pattern = "set pattern     ";
 
-	// each integer value will represent a change of 0.25 in the
-	//  actual transition_period, due to this the current value
-	//  is interpreted as 1
-	// this interpretation makes string conversion much faster
-	uint8_t base_transition_period = 4;	
+	char temperature_buffer[] = "T=~~.~\xDF""C    N=03";
+	uint8_t pattern = 255;
 
 	uint8_t locked = 1;
 
@@ -98,12 +56,14 @@ int main(void)
 		while (1)
 		{
 			// Poll to see if we have a new key - store in curr_key if so
-			if (i2c_get_received_data(&curr_key))
+			uint8_t recv_amt = i2c_get_received_data(curr_key);
+			if (recv_amt == 1)
         	{
-				switch (curr_key)
+				switch (*curr_key)
 				{
 					case 'D':
 						locked = 1;
+						pattern = 255;
 						lcd_clear_display();
 
 						// this is so the cursor does not show up on a
@@ -115,24 +75,10 @@ int main(void)
 					case 'U':
 						locked = 0;
 
-						_update_transition_period(transition_period, base_transition_period);
-						lcd_print_line(transition_period, 1);
-
 						break;
 
-					case 'A':
-						base_transition_period++;
-
-						_update_transition_period(transition_period, base_transition_period);
-						lcd_print_line(transition_period, 1);
-
-						break;
-
-					case 'B':
-						base_transition_period--;
-
-						_update_transition_period(transition_period, base_transition_period);
-						lcd_print_line(transition_period, 1);
+					case '9':
+						lcd_toggle_blink();
 
 						break;
 
@@ -141,48 +87,45 @@ int main(void)
 
 						break;
 
-					case '0':
-						lcd_print_line(pattern_0, 0);
+					case '#':
+						// 'C' = 01000011
+						// 'F' = 01000110
+						// xor   00000101, toggles between C and F
+						temperature_buffer[7] ^= 0x05;
+
+						// the farenheit temperature has not been received though
+						// 	so there is no point in displaying a line
 
 						break;
 
-					case '1':
-						lcd_print_line(pattern_1, 0);
+					case 'A':
+						lcd_clear_display();
+						lcd_print_line(set_window, 0);
+
+						i2c_get_received_data(curr_key);
+						temperature_buffer[14] = curr_key;
+
+						i2c_get_received_data(curr_key);
+						temperature_buffer[15] = curr_key;
+
+						// the lcd is cleared here to prevent set_window from
+						// 	remaining on the display
+						lcd_clear_display();
+						lcd_print_line(temperature_buffer, 1);
 
 						break;
 
-					case '2':
-						lcd_print_line(pattern_2, 0);
+					case 'B':
+						lcd_clear_display();
+						lcd_print_line(set_pattern, 0);
 
-						break;
+						i2c_get_received_data(curr_key);
+						pattern = *curr_key;
 
-					case '3':
-						lcd_print_line(pattern_3, 0);
-
-						break;
-
-					case '4':
-						lcd_print_line(pattern_4, 0);
-
-						break;
-
-					case '5':
-						lcd_print_line(pattern_5, 0);
-
-						break;
-
-					case '6':
-						lcd_print_line(pattern_6, 0);
-
-						break;
-
-					case '7':
-						lcd_print_line(pattern_7, 0);
-
-						break;
-
-					case '9':
-						lcd_toggle_blink();
+						// the lcd is cleared here to prevent set_pattern from
+						// 	remaining on the display
+						lcd_clear_display();
+						lcd_print_line(temperature_buffer, 1);
 
 						break;
 
@@ -190,7 +133,64 @@ int main(void)
 						break;
 				}
 
-				lcd_update_current_key();
+				switch (pattern)
+				{
+					case 0:
+						lcd_print_line(pattern_0, 0);
+						break;
+
+					case 1:
+						lcd_print_line(pattern_1, 0);
+						break;
+
+					case 2:
+						lcd_print_line(pattern_2, 0);
+						break;
+
+					case 3:
+						lcd_print_line(pattern_3, 0);
+						break;
+
+					case 4:
+						lcd_print_line(pattern_4, 0);
+						break;
+
+					case 5:
+						lcd_print_line(pattern_5, 0);
+						break;
+
+					case 6:
+						lcd_print_line(pattern_6, 0);
+						break;
+
+					case 7:
+						lcd_print_line(pattern_7, 0);
+						break;
+
+					default:
+						break;
+				}
+			}
+			// TODO: This is almost certainly wrong right now
+			else if (recv_amt == 2)
+			{
+				// use slow division so the remainder is left over and
+				// 	can be moved into the next slot
+				// this also provides a distinct bound on runtime
+				temperature_buffer[2] = '0';
+				while (curr_key[0] > 9)
+				{
+					temperature_buffer[2]++;
+					curr_key[0] -= 10;
+				}
+				temperature_buffer[3] = '0' + curr_key[0];
+				
+				temperature_buffer[4] = '0';
+				while (curr_key[1] > 9)
+				{
+					temperature_buffer[4]++;
+					curr_key[1] -= 10;
+				}
 			}
 			else
 			{
