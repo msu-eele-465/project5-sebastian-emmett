@@ -120,6 +120,6 @@ __interrupt void TIMER2_B0_ISR(void)
         {
             temp_to_send = average;
         }
-        //i2c_send_temp(temp_to_send);
+        i2c_send_temp(temp_to_send);
     }
 }

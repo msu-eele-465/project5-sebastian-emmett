@@ -2,7 +2,25 @@
 #include <stdbool.h>
 #include "keyboard.h"
 #include "../src/rgb_led.h"
-#include "../../common/i2c.h"     // For i2c_send_to_both()
+#include "../../common/i2c.h"
+#include "../src/lm19.h"
+
+extern bool key_down;
+extern char curr_key;
+extern char prev_key;
+extern bool locked;
+extern bool unlocking;
+extern int base_transition_period;
+extern char curr_num;
+extern char prev_num;
+extern bool num_update;
+extern bool reset_pattern;
+
+extern bool setting_pattern;
+extern bool setting_window;
+extern char curr_pattern;
+
+uint8_t temp_window_size = 0;
 
 // 4x4 Keypad Layout
 static const char KEYPAD_MAP[4][4] =
@@ -103,17 +121,6 @@ void init_keyscan_timer(void)
 #pragma vector=TIMER1_B0_VECTOR
 __interrupt void TIMER1_B0_ISR(void)
 {
-    extern bool key_down;
-    extern char curr_key;
-    extern char prev_key;
-    extern bool locked;
-    extern bool unlocking;
-    extern int base_transition_period;
-    extern char curr_num;
-    extern char prev_num;
-    extern bool num_update;
-    extern bool reset_pattern;
-
     char key = poll_keypad();
     if (key != 0 && !key_down)  // A key was detected
     {
@@ -145,16 +152,20 @@ __interrupt void TIMER1_B0_ISR(void)
         // 2) If 'A' => base_transition_period -= 4, min=4
         else if (key == 'A' && !locked)
         {
-            base_transition_period -= 4;
-            if (base_transition_period < 4)
+            if (setting_window == false)
             {
-                base_transition_period = 4;
+                temp_window_size = 0;
+                setting_window = true;
+            }
+            else {
+                setting_window = false;
+                set_window_size(temp_window_size);
             }
         }
         // 3) If 'B' => base_transition_period += 4
         else if (key == 'B' && !locked)
         {
-            base_transition_period += 4;
+            setting_pattern = true;
         }
         // 4) If key is numeric => update prev_num/curr_num, set flags
         else if (key >= '0' && key <= '9')
@@ -171,8 +182,31 @@ __interrupt void TIMER1_B0_ISR(void)
             {
                 reset_pattern = true;
             }
+
+            if (setting_pattern)
+            {
+                curr_pattern = curr_num;
+                setting_pattern = false;
+            }
+
+            if (setting_window)
+            {
+                if (temp_window_size == 0)
+                {
+                    // If nothing has been entered for the window size, set it to the num pressed
+                    temp_window_size = curr_num - '0';
+                } else if (temp_window_size < 10) {
+                    // If a number already has been entered, multiply it by 10 (shift to 10s place) and add new num
+                    temp_window_size = temp_window_size * 10;
+                    temp_window_size = temp_window_size + curr_num - '0';
+                }
+            }
         }
-        // else: ignore other keys (*, #, C)
+        else if (key == '#' && !locked)
+        {
+            fahrenheit_mode = !fahrenheit_mode;
+        }
+        // else: ignore other keys (#, C)
 
     } 
     else if (key == 0 && key_down == true) 

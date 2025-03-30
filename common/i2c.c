@@ -1,4 +1,6 @@
 #include <msp430.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include "i2c.h"
 #include "intrinsics.h"
 
@@ -8,6 +10,11 @@ volatile char i2c_received_data;
 volatile bool i2c_data_ready = false;
 
 volatile char tx_data;              // Data to send
+volatile int8_t tx_temp_whole = 0;      // Temperature whole value to send
+volatile int8_t tx_temp_tenths = 0;     // Temperature tenths to send
+
+volatile bool i2c_tx_temp_complete = true; // Transmission complete flag for temp transmission (true when idle)
+volatile bool i2c_tx_temp_partial = false; // Transmission partially complete flag for temp transmission
 volatile bool i2c_tx_complete = true; // Transmission complete flag (true when idle)
 
 void i2c_master_init(void)
@@ -58,6 +65,7 @@ void i2c_slave_init(uint8_t address)
 
 void i2c_send(uint8_t slave_address, char data)
 {
+    UCB0TBCNT = 1;             // Send 1 byte per transaction
     i2c_tx_complete = false;   // Toggle tx complete flag false
     tx_data = data;            // Store data for ISR
     UCB0I2CSA = slave_address; // Set slave address
@@ -73,6 +81,17 @@ bool i2c_get_received_data(char* data)
         return true;
     }
     return false;
+}
+
+void i2c_send_temp(int16_t temp)
+{
+    // while (!i2c_tx_complete || !i2c_tx_temp_complete); // Wait for idle state
+    UCB0TBCNT = 2;                // Send 2 bytes per transaction
+    i2c_tx_temp_complete = false; // Toggle tx complete flag false
+    tx_temp_whole = temp / 10;    // Calculate the whole number from our given temperature
+    tx_temp_tenths = temp % 10;   // Calculate the tenths number from our given temperature
+    UCB0I2CSA = SLAVE2_ADDR;      // Set slave address
+    UCB0CTLW0 |= UCTXSTT;         // Generate START
 }
 
 void i2c_send_to_both(char data)
@@ -93,7 +112,24 @@ __interrupt void EUSCI_B0_I2C_ISR(void)
     }
     else if (UCB0IFG & UCTXIFG0)  // Master transmit interrupt
     {
-        UCB0TXBUF = tx_data;  // Send data for master
-        i2c_tx_complete = true;  // Mark transmission complete
+        if (i2c_tx_complete == false)
+        {
+            UCB0TXBUF = tx_data;  // Send data for master
+            i2c_tx_complete = true;  // Mark transmission complete
+        }
+        if (i2c_tx_temp_complete == false)
+        {
+            if (!i2c_tx_temp_partial)
+            {
+                UCB0TXBUF = tx_temp_whole; // Send temperature whole number
+                i2c_tx_temp_partial = true;  // Mark partial transmission complete
+            } else {
+                UCB0TXBUF = tx_temp_tenths; // Send temperature tenths number
+                i2c_tx_temp_partial = false; // Mark transmission complete
+                i2c_tx_temp_complete = true;
+            }
+            
+        }
+        
     }
 }
