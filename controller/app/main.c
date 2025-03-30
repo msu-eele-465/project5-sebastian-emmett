@@ -7,6 +7,7 @@
 #include "../src/pwm.h"         // For creating the pwm signal on P6.0 - P6.2
 #include "../../common/i2c.h"   // Include I2C header
 #include "msp430fr2355.h"
+#include "../src/lm19.h"
 
 
 // ----------------------------------------------------------------------------
@@ -20,6 +21,7 @@ char prev_key = 0;
 // For numeric-only tracking
 char curr_num = 0;
 char prev_num = 0;
+char curr_pattern = 0;
 
 // A boolean for locked/unlocked system state
 bool locked = true; // Default true
@@ -44,6 +46,11 @@ unsigned pass_index = 0;            // How many digits we've collected so far
 
 // Timeout tracking: We'll use the heartbeat (1Hz) to decrement
 volatile int pass_timer = 0;        // 5-second countdown if unlocking
+
+// Variables for LM19
+bool fahrenheit_mode = false;
+bool setting_window = false;
+bool setting_pattern = false;
 
 // Function to set RGB LED color based on the current pattern (migrated from led_bar.c)
 void set_rgb_for_pattern(char pattern)
@@ -92,6 +99,7 @@ int main(void)
     init_responseLED();         // LED on P6.6 to show when a key gets pressed
     init_keyscan_timer();       // Timer_B1 => ~50 ms interrupt
     pwm_init();                 // start pwm signal on P6.0 - P6.2
+    temp_sensor_init();         // Initialize LM19 temperature sensor
     i2c_master_init();          // Initialize I2C module as master
 
     PM5CTL0 &= ~LOCKLPM5;       // Turn on I/O
@@ -190,7 +198,7 @@ int main(void)
         {
             // locked == false
             // Update RGB LED based on curr_num when unlocked
-            set_rgb_for_pattern(curr_num);
+            set_rgb_for_pattern(curr_pattern);
         }
     }
 }
