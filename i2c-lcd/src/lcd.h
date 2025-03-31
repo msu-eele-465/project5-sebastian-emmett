@@ -3,13 +3,6 @@
 
 #include <stdint.h>
 
-/* --- external variables --- */
-
-
-// this is used by lcd_update_current_char and lcd_print_line
-// 	it should be defined in whatever includes lcd.h
-extern char curr_key;
-
 
 /* --- init --- */
 
@@ -27,12 +20,6 @@ void lcd_print_line(const char *line_chars, uint8_t line_num);
 
 // clear the lcd's display
 void lcd_clear_display(void);
-
-// toggle the lcd's cursor between on or off
-void lcd_toggle_cursor(void);
-
-// toggle the lcd's cursor blink between on or off
-void lcd_toggle_blink(void);
 
 
 /* --- advanced use --- */

@@ -5,14 +5,11 @@
 #include "../../common/i2c.h"
 
 
-/* --- global variables --- */
+/* --- defines --- */
 
 
+// this is used in the slave init for i2c
 #define SLAVE_ADDRESS SLAVE1_ADDR
-
-char curr_key = 0;
-int8_t temperature_data[2];
-char receive_data_buffer[3];
 
 
 /* --- program --- */
@@ -28,18 +25,20 @@ int main(void)
 	const char *pattern_2 = "up counter      ";
 	const char *pattern_3 = "in and out      ";
 	const char *pattern_4 = "down counter    ";
-	// const char *pattern_5 = "rotate 1 left   ";
-	// const char *pattern_6 = "rotate 7 right  ";
-	// const char *pattern_7 = "fill left       ";
+	const char *pattern_5 = "rotate 1 left   ";
+	const char *pattern_6 = "rotate 7 right  ";
+	const char *pattern_7 = "fill left       ";
 
 	const char *set_window = "set window size ";
 	const char *set_pattern = "set pattern     ";
 
-	char temperature_buffer[] = "T=~~.~\xDF""C    N=03";
+	char temperature_buffer[] = "T=//./\xDF""C    N=03";
 	uint8_t pattern = 255;
 
 	uint8_t locked = 1;
-	uint8_t recv_amt = 0;
+
+	uint8_t recv_amt;
+	char receive_data_buffer[3];
 
     // Disable low-power mode / GPIO high-impedance
 	PM5CTL0 &= ~LOCKLPM5;
@@ -62,33 +61,19 @@ int main(void)
 			recv_amt = i2c_get_received_data(receive_data_buffer);
 			if (recv_amt == 1)
         	{
-				// If we have a new key in the data buffer, save it to curr_key
-				curr_key = receive_data_buffer[0];
-				switch (curr_key)
+				switch (receive_data_buffer[0])
 				{
 					case 'D':
 						locked = 1;
 						pattern = 255;
-						lcd_clear_display();
 
-						// this is so the cursor does not show up on a
-						//	cleared scrren, that would defeat the purpose
-						lcd_set_ddram_addr(0x20);
+						lcd_clear_display();
 
 						break;
 
 					case 'U':
 						locked = 0;
-
-						break;
-
-					case '9': // #FIXME should probably remove this
-						lcd_toggle_blink();
-
-						break;
-
-					case 'C':
-						lcd_toggle_cursor();
+						lcd_print_line(temperature_buffer, 1);
 
 						break;
 
@@ -107,12 +92,17 @@ int main(void)
 						lcd_clear_display();
 						lcd_print_line(set_window, 0);
 
-						// #FIXME
-						// i2c_get_received_data(curr_key);
-						// temperature_buffer[14] = curr_key;
+						// 1 digit of window size is received with each call, so
+						//  receive then update the buffer twice
+						while(!i2c_get_received_data(receive_data_buffer));
+						temperature_buffer[14] = receive_data_buffer[0];
 
-						// i2c_get_received_data(curr_key);
-						// temperature_buffer[15] = curr_key;
+						while(!i2c_get_received_data(receive_data_buffer));
+						temperature_buffer[15] = receive_data_buffer[0];
+
+						// user should press 'A' here to signify end of input,
+						//	there is no reason to verify though
+						while(!i2c_get_received_data(receive_data_buffer));
 
 						// the lcd is cleared here to prevent set_window from
 						// 	remaining on the display
@@ -125,9 +115,9 @@ int main(void)
 						lcd_clear_display();
 						lcd_print_line(set_pattern, 0);
 
-						// #FIXME
-						// i2c_get_received_data(curr_key);
-						// pattern = *curr_key;
+						// a letter is received so subtract '0' to get the integer
+						while(!i2c_get_received_data(receive_data_buffer));
+						pattern = receive_data_buffer[0] - '0';
 
 						// the lcd is cleared here to prevent set_pattern from
 						// 	remaining on the display
@@ -140,71 +130,59 @@ int main(void)
 						break;
 				}
 
-				switch (pattern)
+				// this should be a switch statement but that uses a few more bytes
+				if (pattern == 0)
 				{
-					case 0:
-						lcd_print_line(pattern_0, 0);
-						break;
-
-					case 1:
-						lcd_print_line(pattern_1, 0);
-						break;
-
-					case 2:
-						lcd_print_line(pattern_2, 0);
-						break;
-
-					case 3:
-						lcd_print_line(pattern_3, 0);
-						break;
-
-					case 4:
-						lcd_print_line(pattern_4, 0);
-						break;
-
-					// case 5:
-					// 	lcd_print_line(pattern_5, 0);
-					// 	break;
-
-					// case 6:
-					// 	lcd_print_line(pattern_6, 0);
-					// 	break;
-
-					// case 7:
-					// 	lcd_print_line(pattern_7, 0);
-					// 	break;
-
-					default:
-						break;
+					lcd_print_line(pattern_0, 0);
+				}
+				else if (pattern == 1)
+				{
+					lcd_print_line(pattern_1, 0);
+				}
+				else if (pattern == 2)
+				{
+					lcd_print_line(pattern_2, 0);
+				}
+				else if (pattern == 3)
+				{
+					lcd_print_line(pattern_3, 0);
+				}
+				else if (pattern == 4)
+				{
+					lcd_print_line(pattern_4, 0);
+				}
+				else if (pattern == 5)
+				{
+					lcd_print_line(pattern_5, 0);
+				}
+				else if (pattern == 6)
+				{
+					lcd_print_line(pattern_6, 0);
+				}
+				else if (pattern == 7)
+				{
+					lcd_print_line(pattern_7, 0);
 				}
 			}
-			// TODO: This is almost certainly wrong right now
-			else if (recv_amt == 2)
+			else if (!locked)
 			{
-				// Pull temperature data from the data buffer into our temperature buffer
-				temperature_data[0] = receive_data_buffer[1];
-				temperature_data[1] = receive_data_buffer[2];
+				// for reference:
+				//  receive_data_buffer[1] -> whole number part of temp
+				//  receive_data_buffer[2] -> float part of temp, as tenths
 
-				while (curr_key > 9)
+				// extract whole number part
+				temperature_buffer[2] = '0';
+				temperature_buffer[3] = receive_data_buffer[1];
+				while (temperature_buffer[3] > 9)
 				{
 					temperature_buffer[2]++;
-					curr_key -= 10;
+					temperature_buffer[3] -= 10;
 				}
-				temperature_buffer[3] = '0' + curr_key;
+				temperature_buffer[3] += '0';
 				
-				temperature_buffer[4] = '0';
-				while (curr_key > 9)
-				{
-					temperature_buffer[4]++;
-					curr_key -= 10;
-				}
-			}
-			else
-			{
-				if (locked)
-				{
-					lcd_clear_display();
-				}
+				// extract float part
+				temperature_buffer[5] = '0' + receive_data_buffer[2];
+				lcd_print_line(temperature_buffer, 1);
 			}
 		}
 	}
