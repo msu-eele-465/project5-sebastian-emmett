@@ -3,10 +3,14 @@
 void pwm_init(void)
 {
     // setup Timer3B
-    TB3CTL |= TBCLR;            // clear timer and dividers
-    TB3CTL |= CNTL__16;         // select 16-bit counter length
-    TB3CTL |= TBSSEL__SMCLK;    // source = SMCLK (1 MHz)
-    TB3CTL |= MC__UP;           // count in up mode (for timer compares)
+    // clear timer and dividers
+    TB3CTL |= TBCLR;
+    // select 16-bit counter length
+    TB3CTL |= CNTL__16;
+    // source = SMCLK (1 MHz)
+    TB3CTL |= TBSSEL__SMCLK;
+    // count in up mode (for timer compares)
+    TB3CTL |= MC__UP;
 
     // set capture compare register information
     TB3CCR0 = 10000;
@@ -23,8 +27,10 @@ void pwm_init(void)
     TB3CCTL2 |= OUTMOD_7;
     TB3CCTL3 |= OUTMOD_7;
 
-    P6OUT &= ~(BIT0 | BIT1 | BIT2);     // clear output
-    P6DIR |= BIT0 | BIT1 | BIT2;        // set to an output
+    // clear output
+    P6OUT &= ~(BIT0 | BIT1 | BIT2);
+    // set to an output
+    P6DIR |= BIT0 | BIT1 | BIT2;
 
     // setup P6.0 - P6.2 to accept automatic updates
     P6SEL0 |= BIT0 | BIT1 | BIT2;

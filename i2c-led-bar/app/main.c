@@ -4,15 +4,28 @@
 #include "../src/led_bar.h"
 
 // Globals for LED bar control
-int transition_period = 16;       // Transition period -> 1s
-char curr_num = '0';              // Current pattern number
-char prev_num = '0';              // Previous pattern number for reset logic
-bool locked = true;               // System lock state
-bool num_update = false;          // Flag for new pattern received
-bool reset_pattern = false;       // Flag to reset pattern
-char received = 'a';              // Char to hold incoming data from i2c
 
-#define SLAVE_ADDRESS SLAVE1_ADDR  // Use SLAVE1_ADDR from i2c.h
+// Transition period -> 1s
+int transition_period = 16;
+// Current pattern number
+char curr_num = '0';
+// Previous pattern number for reset logic
+char prev_num = '0';
+// System lock state
+bool locked = true;
+// Flag for new pattern received
+bool num_update = false;
+// Flag to reset pattern
+bool reset_pattern = false;
+// Char to hold incoming data from i2c
+char received_buffer[3];
+// Char for received character
+char received_char = 'a';
+// Bool to hold if we're updating the pattern
+bool update_pattern = false;
+
+// Use SLAVE1_ADDR from i2c.h
+#define SLAVE_ADDRESS SLAVE1_ADDR
 
 int main(void)
 {
@@ -21,7 +34,7 @@ int main(void)
 
     // Set P1.0 as output for debug
     P1DIR |= BIT1;
-    P1OUT &= ~BIT1;  // Start low
+    P1OUT &= ~BIT1;
 
     while (true)
     {
@@ -37,24 +50,40 @@ int main(void)
 
         while (true)
         {
-            if (i2c_get_received_data(&received))  // Poll the i2c for new data
+            // Poll the i2c for new data
+            if (i2c_get_received_data(received_buffer) == 1)
             {
+                // Update received_char
+                received_char = received_buffer[0];
                 // Process received data to update LED bar state
-                if (received == 'D')
+                if (received_char == 'D')
                 {
-                    locked = true;          // Lock the system
-                    led_bar_update(0x00);   // Clear LED bar when locked
+                    // Lock the system and clear the LED bar
+                    locked = true;
+                    led_bar_update(0x00);
                 }
-                else if (received == 'U')
+                else if (received_char == 'U')
                 {
-                    locked = false;         // Unlock the system
+                    // Unlock the system
+                    locked = false;
                 }
-                else if (received >= '0' && received <= '7')
+                else if (received_char == 'B')
                 {
-                    prev_num = curr_num;    // Store previous pattern
-                    curr_num = received;    // Set new pattern
-                    num_update = true;      // Flag new pattern received
-                    reset_pattern = (prev_num == curr_num);  // Reset if same pattern
+                    // Enable update_pattern
+                    update_pattern = true;
+                }
+                else if (received_char >= '0' && received_char <= '7' && update_pattern)
+                {
+                    // Clear update_pattern
+                    update_pattern = false;
+                    // Store previous pattern
+                    prev_num = curr_num;
+                    // Set new pattern
+                    curr_num = received_char;
+                    // Flag new pattern received
+                    num_update = true;
+                    // Reset if same pattern
+                    reset_pattern = (prev_num == curr_num);
                 }
             }
 

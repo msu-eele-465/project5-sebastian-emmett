@@ -109,10 +109,13 @@ void init_keyscan_timer(void)
 {
     // For 50 ms @ ~1 MHz SMCLK, /64 => 1 MHz/64 = 15625 Hz
     // 50 ms => 0.05 * 15625 = 781 counts
-    TB1CTL   = TBSSEL__SMCLK | ID__8 | MC__UP | TBCLR; 
-    TB1EX0   = TBIDEX__8;        // total /64
-    TB1CCR0  = 781;             // ~50 ms 
-    TB1CCTL0 = CCIE;            // Enable CCR0 interrupt
+    TB1CTL   = TBSSEL__SMCLK | ID__8 | MC__UP | TBCLR;
+    // total /64
+    TB1EX0   = TBIDEX__8;
+    // ~50 ms 
+    TB1CCR0  = 781;
+    // Enable CCR0 interrupt
+    TB1CCTL0 = CCIE;
 }
 
 // ----------------------------------------------------------------------------
@@ -122,7 +125,8 @@ void init_keyscan_timer(void)
 __interrupt void TIMER1_B0_ISR(void)
 {
     char key = poll_keypad();
-    if (key != 0 && !key_down)  // A key was detected
+    // A key was detected
+    if (key != 0 && !key_down)
     {
         key_down = true;
         // Set P6.6 LED on

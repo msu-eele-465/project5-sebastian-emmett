@@ -12,10 +12,14 @@ void init_heartbeat(void)
     P1OUT &= ~BIT0;
 
     // Configure Timer_B0 for ~1Hz if SMCLK ~1MHz
-    TB0CTL  = TBSSEL__SMCLK | ID__8 | MC__UP | TBCLR; // SMCLK/8, up mode
-    TB0EX0  = TBIDEX__8;                              // further /8 => total /64
-    TB0CCR0 = 15625;                                  // 1 second at ~1 MHz/64
-    TB0CCTL0= CCIE;                                   // enable CCR0 interrupt :D
+    // SMCLK/8, up mode
+    TB0CTL  = TBSSEL__SMCLK | ID__8 | MC__UP | TBCLR;
+    // further /8 => total /64
+    TB0EX0  = TBIDEX__8;
+    // 1 second at ~1 MHz/64
+    TB0CCR0 = 15625;
+    // enable CCR0 interrupt :D
+    TB0CCTL0= CCIE;
 }
 
 // ----------------------------------------------------------------------------
@@ -24,10 +28,12 @@ void init_heartbeat(void)
 #pragma vector = TIMER0_B0_VECTOR
 __interrupt void TIMER0_B0_ISR(void)
 {
-    P1OUT ^= BIT0;  // Toggle heartbeat LED!
+    // Toggle heartbeat LED!
+    P1OUT ^= BIT0;
 
     // Decrement pass_timer if we're in unlocking mode
-    extern bool unlocking;      // We'll refer to unlocking from main
+    // We'll refer to unlocking from main
+    extern bool unlocking;
     extern volatile int pass_timer;
 
     if (unlocking && pass_timer > 0)
