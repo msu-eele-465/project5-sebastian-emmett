@@ -23,6 +23,8 @@ char received_buffer[3];
 char received_char = 'a';
 // Bool to hold if we're updating the pattern
 bool update_pattern = false;
+// Bool to hold if we're updating the window
+bool update_window = false;
 
 // Use SLAVE1_ADDR from i2c.h
 #define SLAVE_ADDRESS SLAVE1_ADDR
@@ -62,6 +64,11 @@ int main(void)
                     locked = true;
                     led_bar_update(0x00);
                 }
+                else if (received_char == 'A')
+                {
+                    // Toggle update_window
+                    update_window = !update_window;
+                }
                 else if (received_char == 'U')
                 {
                     // Unlock the system
@@ -72,7 +79,7 @@ int main(void)
                     // Enable update_pattern
                     update_pattern = true;
                 }
-                else if (received_char >= '0' && received_char <= '7' && update_pattern)
+                else if (received_char >= '0' && received_char <= '7' && update_pattern && !update_window)
                 {
                     // Clear update_pattern
                     update_pattern = false;
