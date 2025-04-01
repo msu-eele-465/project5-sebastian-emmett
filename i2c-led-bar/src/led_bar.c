@@ -15,6 +15,12 @@ extern bool locked;
 extern bool num_update;
 extern bool reset_pattern;
 
+// Both of these are necessary for breaking out of the dalay loop
+// Flag for completed transaction
+extern volatile bool transaction_complete;
+// Number of bytes in last completed transaction
+extern volatile uint8_t rx_bytes;
+
 
 /* --- pattern variables --- */
 
@@ -221,16 +227,9 @@ void led_bar_delay(void)
 
     while (loop_count > 0)
     {
-        // if the system becomes locked exit delay
-        if (locked == true)
+        // if a char is received
+        if (transaction_complete && (rx_bytes == 1))
         {
-            return;
-        }
-
-		// if the system receives a new number exit the delay
-        if (num_update == true)
-        {
-            num_update = false;
             return;
         }
 
