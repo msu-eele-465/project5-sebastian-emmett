@@ -45,7 +45,7 @@ void temp_sensor_init(void)
     // further /8 => total /64
     TB2EX0 = TBIDEX__8;
     // 1 second at ~1 MHz/128
-    TB2CCR0 = 15625;
+    TB2CCR0 = 7812;
     // enable interrupt :D
     TB2CCTL0 = CCIE;
 

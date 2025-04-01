@@ -156,8 +156,6 @@ void led_bar_update_pattern(void)
             led_bar_update(count_4);
             break;
 
-        // pattern 5 - 7 are commented out since they bring the
-        //  executable memory past the limit for the 2310
 		// set LED rolling across LED bar left
         case '5':
 			transition_period = 24;

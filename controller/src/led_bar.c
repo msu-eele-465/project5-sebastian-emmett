@@ -41,8 +41,10 @@ void led_bar_init(void)
     P3SEL0 &= ~(BIT7 | BIT6 | BIT5 | BIT4 | BIT3 | BIT2 | BIT1 | BIT0);
     P3SEL1 &= ~(BIT7 | BIT6 | BIT5 | BIT4 | BIT3 | BIT2 | BIT1 | BIT0);
 
-    P3DIR |= BIT7 | BIT6 | BIT5 | BIT4 | BIT3 | BIT2 | BIT1 | BIT0;         // set as output
-    P3OUT &= ~(BIT7 | BIT6 | BIT5 | BIT4 | BIT3 | BIT2 | BIT1 | BIT0);      // clear output
+    // set as output
+    P3DIR |= BIT7 | BIT6 | BIT5 | BIT4 | BIT3 | BIT2 | BIT1 | BIT0;
+    // clear output
+    P3OUT &= ~(BIT7 | BIT6 | BIT5 | BIT4 | BIT3 | BIT2 | BIT1 | BIT0);
 }
 
 // ----------------------------------------------------------------------------
@@ -59,8 +61,10 @@ void led_bar_update_pattern(void)
         case '0':
             BTP_multiplier = 1;
 
-            led_bar_update(0xAA);   // display 10101010
-            rgb_set(0xFF, 0xFF, 0xFF); // Set RGB LED to white
+            // display 10101010
+            led_bar_update(0xAA);
+            // Set RGB LED to white
+            rgb_set(0xFF, 0xFF, 0xFF);
 
             reset_pattern = false;
             break;
@@ -77,8 +81,10 @@ void led_bar_update_pattern(void)
                 count_1 = ~count_1;
             }
 
-            led_bar_update(count_1);    // display either 10101010 or 01010101
-            rgb_set(0x94, 0x00, 0x00); // Set RGB LED to blood
+            // display either 10101010 or 01010101
+            led_bar_update(count_1);
+            // Set RGB LED to blood
+            rgb_set(0x94, 0x00, 0x00);
 
             break;
 
@@ -91,12 +97,15 @@ void led_bar_update_pattern(void)
             }
             else
             {
-                count_2++;              // unsigned expressions cannot overflow, this will automatically
-                                        // roll to 0 at 255
+                // unsigned expressions cannot overflow, this will automatically
+                // roll to 0 at 255
+                count_2++;              
             }
 
-            led_bar_update(count_2);    // display binary count from 0 to 255
-            rgb_set(0x00, 0xFF, 0x00); // Set RGB LED to lime
+            // display binary count from 0 to 255
+            led_bar_update(count_2);
+            // Set RGB LED to lime
+            rgb_set(0x00, 0xFF, 0x00); 
 
             break;
 
@@ -112,8 +121,10 @@ void led_bar_update_pattern(void)
                 (count_3 < COUNT_3_ARRAY_MAX_INDEX) ? (count_3++) : (count_3 = 0);
             }
 
-            led_bar_update(COUNT_3_ARRAY[count_3]);    // display two led's boucing against each other
-            rgb_set(0xFF, 0x80, 0x00); // Set RGB LED to orange
+            // display two led's boucing against each other
+            led_bar_update(COUNT_3_ARRAY[count_3]);
+            // Set RGB LED to orange
+            rgb_set(0xFF, 0x80, 0x00);
 
             break;
 
@@ -126,12 +137,15 @@ void led_bar_update_pattern(void)
             }
             else
             {
-                count_4--;              // unsigned expressions cannot overflow, this will automatically
-                                        // roll to 255 at 0
+                // unsigned expressions cannot overflow, this will automatically
+                // roll to 255 at 0
+                count_4--;
             }
 
-            led_bar_update(count_4);    // display binary count from 255 to 0
-            rgb_set(0x00, 0x00, 0xFF); // Set RGB LED to blue
+            // display binary count from 255 to 0
+            led_bar_update(count_4);
+            // Set RGB LED to blue
+            rgb_set(0x00, 0x00, 0xFF); 
 
             break;
 
@@ -147,8 +161,10 @@ void led_bar_update_pattern(void)
                 (*pointer_5 == pointer_5_array_END) ? (pointer_5 = pointer_5_array) : (pointer_5++);
             }
 
-            led_bar_update(*pointer_5); // display a single bit shifting across
-            rgb_set(0x15, 0x15, 0x2e); // Set RGB LED to navy
+            // display a single bit shifting across
+            led_bar_update(*pointer_5);
+            // Set RGB LED to navy
+            rgb_set(0x15, 0x15, 0x2e); 
 
             break;
 
@@ -164,8 +180,10 @@ void led_bar_update_pattern(void)
                 (*pointer_6 == pointer_6_array_END) ? (pointer_6 = pointer_6_array) : (pointer_6++);
             }
 
-            led_bar_update(*pointer_6); // display an unflipped bit shifting across
-            rgb_set(0xFF, 0x00, 0xE1); // Set RGB LED to lavender
+            // display an unflipped bit shifting across
+            led_bar_update(*pointer_6); 
+            // Set RGB LED to lavender
+            rgb_set(0xFF, 0x00, 0xE1); 
 
             break;
 
@@ -181,8 +199,10 @@ void led_bar_update_pattern(void)
                 (*pointer_7 == pointer_7_array_END) ? (pointer_7 = pointer_7_array) : (pointer_7++);
             }
 
-            led_bar_update(*pointer_7); // display an every growing number of set bits
-            rgb_set(0x20, 0x46, 0x22); // Set RGB LED to forest
+            // display an every growing number of set bits
+            led_bar_update(*pointer_7); 
+            // Set RGB LED to forest
+            rgb_set(0x20, 0x46, 0x22); 
 
             break;
 
